@@ -1,0 +1,63 @@
+local ffi = require "ffi"
+local dasm = require "dasm"
+
+|.arch x64
+|.actionlist actions
+
+local Dst = dasm.new( actions )
+
+|  sub     rsp, 104
+|  movups  xmm3, [rdx]
+|  lea     rax, qword [rcx+8]
+|  movups  xmm4, [rdx+16]
+|  mov     ecx, 4
+|  movups  xmm5, [rdx+32]
+|  mov     r9d, ecx
+|  movaps  [rsp+80], xmm6
+|  movups  xmm6, [rdx+48]
+|  lea     rdx, qword [rsp+0]
+|  movaps  [rsp+64], xmm7
+|  xorps   xmm7, xmm7
+|->L1:
+|  movss   xmm2, dword [rax-8]
+|  movss   xmm0, dword [rax-4]
+|  movss   xmm1, dword [rax]
+|  shufps  xmm2, xmm2, 0
+|  mulps   xmm2, xmm3
+|  shufps  xmm0, xmm0, 0
+|  mulps   xmm0, xmm4
+|  addps   xmm2, xmm7
+|  shufps  xmm1, xmm1, 0
+|  mulps   xmm1, xmm5
+|  addps   xmm2, xmm0
+|  movss   xmm0, dword [rax+4]
+|  shufps  xmm0, xmm0, 0
+|  add     rax, 16
+|  mulps   xmm0, xmm6
+|  addps   xmm2, xmm1
+|  addps   xmm2, xmm0
+|  movups  [rdx], xmm2
+|  add     rdx, 16
+|  sub     r9, 1
+|  jne ->L1
+|  lea     rax, qword [rsp+0]
+|->L2:
+|  movups  xmm0, [rax]
+|  lea     rax, qword [rax+16]
+|  movups  [r8], xmm0
+|  lea     r8, qword [r8+16]
+|  sub     rcx, 1
+|  jne ->L2
+|  movaps  xmm6, [rsp+80]
+|  movaps  xmm7, [rsp+64]
+|  add     rsp, 104
+|  ret     0
+
+
+local code = Dst:build()
+local fptr = ffi.cast( "void __cdecl (*) (__m128* x, __m128* y, __m128* result)", code )
+
+debug.getregistry().__DASM_CODEGEN = debug.getregistry().__DASM_CODEGEN or {}
+table.insert( debug.getregistry().__DASM_CODEGEN, code )
+
+return fptr

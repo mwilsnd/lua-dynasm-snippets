@@ -1,0 +1,33 @@
+local ffi = require "ffi"
+local dasm = require "dasm"
+
+|.arch x64
+|.actionlist actions
+
+local Dst = dasm.new( actions )
+
+|  movups  xmm2, oword [rdx]
+|  movaps  xmm3, xmm2
+|  movaps  xmm0, xmm2
+|  shufps  xmm3, xmm2, 255
+|  movaps  xmm1, xmm2
+|  mulps   xmm3, oword [rcx+48]
+|  shufps  xmm1, xmm2, 85
+|  mulps   xmm1, oword [rcx+16]
+|  shufps  xmm0, xmm2, 170
+|  mulps   xmm0, oword [rcx+32]
+|  shufps  xmm2, xmm2, 0
+|  mulps   xmm2, oword [rcx]
+|  addps   xmm3, xmm0
+|  addps   xmm1, xmm2
+|  addps   xmm3, xmm1
+|  movups  oword [r8], xmm3
+|  ret     0
+
+local code = Dst:build()
+local fptr = ffi.cast( "void __cdecl (*) (float* x, float* y, float* ret)", code )
+
+debug.getregistry().__DASM_CODEGEN = debug.getregistry().__DASM_CODEGEN or {}
+table.insert( debug.getregistry().__DASM_CODEGEN, code )
+
+return fptr
